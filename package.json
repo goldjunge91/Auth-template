@@ -8,17 +8,18 @@
     "start": "next start",
     "lint": "next lint",
     "dev:cloud": "./.devcontainer/open-port.sh & npm run dev",
-    "db:generate:pg": "npx drizzle-kit generate --config drizzle.pg.config.ts",
     "db:generate:sqlite": "npx drizzle-kit generate --config drizzle.sqlite.config.ts",
-    "db:migrate:pg": "npx drizzle-kit migrate --config drizzle.pg.config.ts",
     "db:migrate:sqlite": "npx drizzle-kit migrate --config drizzle.sqlite.config.ts",
-    "db:generate": "npx drizzle-kit generate --config drizzle.config.ts",
-    "db:migrate": "npx drizzle-kit migrate --config drizzle.config.ts",
     "db:studio:sqlite": "npx drizzle-kit studio --config drizzle.sqlite.config.ts",
-    "db:studio:postgres": "npx drizzle-kit studio --config drizzle.pg.config.ts"
+    "db:generate:pg": "npx drizzle-kit generate --config drizzle.pg.config.ts",
+    "db:migrate:pg": "npx drizzle-kit migrate --config drizzle.pg.config.ts",
+    "db:studio:pg": "npx drizzle-kit studio --config drizzle.pg.config.ts",
+    "db:generate": "npx drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "npx drizzle-kit migrate --config drizzle.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
+    "@libsql/client": "^0.15.7",
     "@paralleldrive/cuid2": "^2.2.2",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",

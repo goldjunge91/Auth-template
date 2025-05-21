@@ -1,46 +1,118 @@
-import { getDbUrl, isDatabaseSqlite } from '@/lib/utilities/constants';
-import * as pgSchemaImport from './schema/postgres';
-import * as sqliteSchemaImport from './schema/sqlite/index.sql';
+import { drizzle as drizzleBetterSqlite3, BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import { drizzle as drizzleLibsql, LibSQLDatabase } from 'drizzle-orm/libsql';
+import { createClient, Client as LibsqlClient } from '@libsql/client';
 
-// Drizzle Importe
-import { drizzle as drizzlePg, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { drizzle as drizzleSqlite, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { Pool } from 'pg';
-import Database from 'better-sqlite3';
-// Importiere die spezifischen eq-Funktionen und SQL/Column Typen
-import { eq, SQL, Column, AnyColumn } from 'drizzle-orm';
+import * as schema from "./schema/sqlite/index.sql"; // Annahme: Dieses Schema wird für beide Datenbanktypen verwendet.
 
+// Typdefinition für die Datenbankinstanz, die entweder SQLite oder TursoDB sein kann.
+type DbInstance = LibSQLDatabase<typeof schema> | BetterSQLite3Database<typeof schema>;
 
-// Holen der Datenbankverbindungszeichenfolge
-const dbUrl = getDbUrl();
-console.log(`Verwende Datenbank: ${dbUrl}`);
+const createDbConnection = (): DbInstance => {
+  const nodeEnv = process.env.NODE_ENV;
+  // Logger ist standardmäßig nur in der Entwicklungsumgebung aktiv.
+  const enableLogger = nodeEnv === 'development';
 
-// Typdefinitionen für eine bessere Abstraktion
-type GenericDatabase = NodePgDatabase<typeof pgSchemaImport> | BetterSQLite3Database<typeof sqliteSchemaImport>;
-type GenericSchema = typeof pgSchemaImport | typeof sqliteSchemaImport;
-type GenericEq = (col: AnyColumn, val: any) => SQL;
+  if (nodeEnv === 'development') {
+    console.log("DB: Entwicklungsmodus - Verwende lokale SQLite-Datenbank.");
+    const sqlitePath = process.env.SQLITE_DB_PATH;
+    console.log(`SQLite-Pfad: ${sqlitePath}`);
+    try {
+      const sqlite = new Database(sqlitePath);
+      return drizzleBetterSqlite3(sqlite, { schema, logger: enableLogger });
+    } catch (error) {
+      console.error(`Fehler beim Initialisieren der SQLite-Datenbank unter ${sqlitePath}:`, error);
+      throw new Error(`Konnte SQLite-Datenbank nicht initialisieren: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    console.log("DB: Produktions-/Standardmodus - Verwende TursoDB.");
+    const tursoUrl = process.env.TURSO_URL;
+    const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 
-let db: GenericDatabase;
-let schema: GenericSchema;
-let genericEq: GenericEq;
+    if (!tursoUrl) {
+      throw new Error(
+        'TURSO_URL ist nicht gesetzt. Diese Umgebungsvariable wird für TursoDB benötigt.'
+      );
+    }
+    if (!tursoAuthToken) {
+      // In Ihrer ursprünglichen auskommentierten Konfiguration war dies eine Warnung.
+      console.warn(
+        'TURSO_AUTH_TOKEN ist nicht gesetzt. Dies könnte für die Verbindung zu TursoDB erforderlich sein.'
+      );
+    }
 
-if (isDatabaseSqlite()) {
-  console.log('SQLite wird verwendet (lokale Entwicklung)');
-  // SQLite-spezifische Konfiguration
-  const sqlitePath = dbUrl.replace('sqlite:', '');
-  const sqlite = new Database(sqlitePath);
-  db = drizzleSqlite(sqlite, { schema: sqliteSchemaImport }) as BetterSQLite3Database<typeof sqliteSchemaImport>;
-  schema = sqliteSchemaImport;
-  genericEq = eq as GenericEq;
-} else {
-  console.log('PostgreSQL wird verwendet');
-  // PostgreSQL-spezifische Konfiguration
-  const pool = new Pool({
-    connectionString: dbUrl,
-  });
-  db = drizzlePg(pool, { schema: pgSchemaImport }) as NodePgDatabase<typeof pgSchemaImport>;
-  schema = pgSchemaImport;
-  genericEq = eq as GenericEq;
-}
+    try {
+      const client: LibsqlClient = createClient({
+        url: tursoUrl,
+        authToken: tursoAuthToken, // createClient behandelt undefined authToken, falls nicht gesetzt
+      });
+      // Der Logger wird auch hier durch enableLogger gesteuert (d.h. für Nicht-Entwicklung standardmäßig aus).
+      return drizzleLibsql(client, { schema, logger: enableLogger });
+    } catch (error) {
+      console.error('Fehler beim Initialisieren des TursoDB-Clients:', error);
+      throw new Error(`Konnte TursoDB-Client nicht initialisieren: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+};
 
-export { db, schema, genericEq };
+export const db: DbInstance = createDbConnection();
+
+// import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+// import { drizzle as drizzleLibSql, LibSQLDatabase } from 'drizzle-orm/libsql';
+// import { createClient, Client } from '@libsql/client';
+// import Database from 'better-sqlite3';
+// import { eq } from 'drizzle-orm';
+// import * as schema from './schema/sqlite/index.sql';
+
+// // Typdefinition für die zurückgegebene Datenbankinstanz
+// type DbInstance = LibSQLDatabase<typeof schema> | BetterSQLite3Database<typeof schema>;
+
+// const createDbInstance = (): DbInstance => {
+//   const nodeEnv = process.env.NODE_ENV;
+//   const enableLogger = nodeEnv === 'development';
+
+//   console.log(`Initialisiere Datenbank für Umgebung: ${nodeEnv || 'nicht gesetzt (produktiv angenommen)'}`);
+
+//   if (nodeEnv === 'development') {
+//     console.log("Verwende SQLite für die lokale Entwicklung.");
+//     const sqlitePath = process.env.SQLITE_DB_PATH || './src/db/local.db';
+//     console.log(`SQLite-Pfad: ${sqlitePath}`);
+//     try {
+//       const sqlite = new Database(sqlitePath);
+//       return drizzle(sqlite, { schema, logger: enableLogger });
+//     } catch (error) {
+//       console.error(`Fehler beim Initialisieren der SQLite-Datenbank unter ${sqlitePath}:`, error);
+//       throw new Error(`Konnte SQLite-Datenbank nicht initialisieren: ${error instanceof Error ? error.message : String(error)}`);
+//     }
+//   } else {
+//     console.log("Verwende TursoDB.");
+//     const tursoUrl = process.env.TURSO_DATABASE_URL;
+//     const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
+
+//     if (!tursoUrl) {
+//       throw new Error(
+//         'TURSO_DATABASE_URL ist nicht gesetzt. Diese Variable wird für Nicht-Entwicklungsumgebungen benötigt.'
+//       );
+//     }
+//     if (!tursoAuthToken) {
+//       console.warn(
+//         'TURSO_AUTH_TOKEN ist nicht gesetzt. Dies könnte für die Verbindung zu TursoDB erforderlich sein.'
+//       );
+//     }
+
+//     try {
+//       const turso: Client = createClient({
+//         url: tursoUrl,
+//         authToken: tursoAuthToken,
+//       });
+//       return drizzleLibSql(turso, { schema, logger: enableLogger });
+//     } catch (error) {
+//       console.error('Fehler beim Initialisieren des TursoDB-Clients:', error);
+//       throw new Error(`Konnte TursoDB-Client nicht initialisieren: ${error instanceof Error ? error.message : String(error)}`);
+//     }
+//   }
+// };
+
+// export const db: DbInstance = createDbInstance();
+
+// export { eq };

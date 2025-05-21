@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
-import { db, schema, genericEq } from '@/db'; // Importiere die generischen DB-Objekte
+import { db } from '@/db'; // Importiere schema und eq von @/db
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: Request) {
   try {
@@ -46,10 +47,8 @@ export async function POST(request: Request) {
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Prüfen, ob die E-Mail bereits existiert
-    // @ts-ignore
     const existingUsers = await db.select().from(schema.users)
-      // @ts-ignore
-      .where(genericEq(schema.users.email, email));
+      .where(eq(schema.users.email, email));
 
     if (existingUsers && existingUsers.length > 0) {
       return NextResponse.json(
@@ -63,7 +62,8 @@ export async function POST(request: Request) {
     const result = await db.insert(schema.users).values({
       name,
       email,
-      passwordHash: hashedPassword, // Sicherstellen, dass das Feld in beiden Schemas gleich heißt oder hier anpassen
+      passwordHash: hashedPassword,
+      role: 'user', // Standardrolle 'user' bei der Registrierung setzen
     }).returning();
 
     if (!result || result.length === 0) {
