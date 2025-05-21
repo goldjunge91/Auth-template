@@ -1,38 +1,14 @@
 import * as dotenv from 'dotenv';
-import { defineConfig } from 'drizzle-kit';
-import { join } from 'path';
+import { isDatabaseSqlite } from "./src/lib/utilities/constants";
 
 dotenv.config({
   path: '.env',
 });
 
-// Lokaler Datenbankpfad als Fallback
-const localDbPath = join(process.cwd(), './src/db/local.db');
-
-// Verwende DATABASE_URL aus Umgebungsvariablen, oder lokale Datei als Fallback
-const dbUrl = process.env.DATABASE_URL || localDbPath;
-
-export default defineConfig({
-  dialect: "postgresql",
-  schema: './src/db/schema/*',
-  out: './src/db/drizzle',
-  driver: "pglite",
-  dbCredentials: {
-    url: dbUrl,
-  },
-  migrations: {
-    prefix: "timestamp",
-    table: "__drizzle_migrations__",
-    schema: 'public',
-  },
-  entities: {
-    roles: {
-      provider: '',
-      exclude: [],
-      include: []
-    }
-  },
-  verbose: true,
-  strict: true,
-  breakpoints: true,
-});
+// Verwende die richtige Konfiguration basierend auf dem Datenbanktyp
+// Diese Datei delegiert nur an die spezifischen Konfigurationsdateien
+if (isDatabaseSqlite()) {
+  module.exports = require('./drizzle.sqlite.config');
+} else {
+  module.exports = require('./drizzle.pg.config');
+}

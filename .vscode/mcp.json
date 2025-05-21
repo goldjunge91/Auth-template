@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "drizzle-orm-docs Docs": {
+      "type": "sse",
+      "url": "https://gitmcp.io/drizzle-team/drizzle-orm-docs"
+    },
+      "drizzle-playground Docs": {
+      "url": "https://gitmcp.io/rphlmr/drizzle-playground"
+    }
+  }
+}
