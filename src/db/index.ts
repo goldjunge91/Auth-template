@@ -1,9 +1,10 @@
 import { drizzle as drizzleBetterSqlite3, BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { drizzle as drizzleLibsql, LibSQLDatabase } from 'drizzle-orm/libsql';
-import { createClient, Client as LibsqlClient } from '@libsql/client';
-
-import * as schema from "./schema/sqlite/index.sql"; // Annahme: Dieses Schema wird für beide Datenbanktypen verwendet.
+import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
+import { createClient, Client } from '@libsql/client'; // Geändert
+import path from "node:path";
+import fs from "node:fs";
+import * as schema from "./schema/sqlite/index.sql";
 
 // Typdefinition für die Datenbankinstanz, die entweder SQLite oder TursoDB sein kann.
 type DbInstance = LibSQLDatabase<typeof schema> | BetterSQLite3Database<typeof schema>;
@@ -15,14 +16,39 @@ const createDbConnection = (): DbInstance => {
 
   if (nodeEnv === 'development') {
     console.log("DB: Entwicklungsmodus - Verwende lokale SQLite-Datenbank.");
-    const sqlitePath = process.env.SQLITE_DB_PATH;
-    console.log(`SQLite-Pfad: ${sqlitePath}`);
+    let sqlitePathFromEnv = process.env.SQLITE_DB_PATH;
+
+    if (!sqlitePathFromEnv) {
+      // Fallback, falls SQLITE_DB_PATH nicht gesetzt ist, obwohl Sie es erwarten.
+      console.warn("SQLITE_DB_PATH ist nicht in den Umgebungsvariablen gesetzt. Verwende Standardpfad './src/db/local.db'.");
+      sqlitePathFromEnv = './src/db/local.db'; // Oder Ihr bevorzugter Standard, falls nicht per Env gesetzt
+    }
+
+    // Entferne das "file:" Präfix, falls vorhanden
+    if (sqlitePathFromEnv.startsWith("file:")) {
+      sqlitePathFromEnv = sqlitePathFromEnv.substring(5);
+    }
+
+    // Wandle den Pfad in einen absoluten Pfad um.
+    const resolvedSqlitePath = path.resolve(sqlitePathFromEnv);
+
+    console.log(`SQLite-Pfad wird verwendet: ${resolvedSqlitePath}`);
     try {
-      const sqlite = new Database(sqlitePath);
+      // Extrahiere das Verzeichnis aus dem Pfad.
+      const dir = path.dirname(resolvedSqlitePath);
+
+      // Stelle sicher, dass das Verzeichnis existiert.
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        console.log(`Verzeichnis ${dir} wurde erstellt.`);
+      }
+
+      const sqlite = new Database(resolvedSqlitePath);
+      console.log(`SQLite-Datenbank erfolgreich initialisiert unter: ${resolvedSqlitePath}`);
       return drizzleBetterSqlite3(sqlite, { schema, logger: enableLogger });
     } catch (error) {
-      console.error(`Fehler beim Initialisieren der SQLite-Datenbank unter ${sqlitePath}:`, error);
-      throw new Error(`Konnte SQLite-Datenbank nicht initialisieren: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`Fehler beim Initialisieren der SQLite-Datenbank unter ${resolvedSqlitePath}:`, error);
+      throw new Error(`Konnte SQLite-Datenbank nicht initialisieren (${resolvedSqlitePath}): ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
     console.log("DB: Produktions-/Standardmodus - Verwende TursoDB.");
@@ -35,26 +61,23 @@ const createDbConnection = (): DbInstance => {
       );
     }
     if (!tursoAuthToken) {
-      // In Ihrer ursprünglichen auskommentierten Konfiguration war dies eine Warnung.
       console.warn(
         'TURSO_AUTH_TOKEN ist nicht gesetzt. Dies könnte für die Verbindung zu TursoDB erforderlich sein.'
       );
     }
 
     try {
-      const client: LibsqlClient = createClient({
+      const client: Client = createClient({ // Geändert
         url: tursoUrl,
-        authToken: tursoAuthToken, // createClient behandelt undefined authToken, falls nicht gesetzt
+        authToken: tursoAuthToken,
       });
-      // Der Logger wird auch hier durch enableLogger gesteuert (d.h. für Nicht-Entwicklung standardmäßig aus).
-      return drizzleLibsql(client, { schema, logger: enableLogger });
+      return drizzle(client, { schema, logger: enableLogger });
     } catch (error) {
       console.error('Fehler beim Initialisieren des TursoDB-Clients:', error);
       throw new Error(`Konnte TursoDB-Client nicht initialisieren: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 };
-
 export const db: DbInstance = createDbConnection();
 
 // import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';

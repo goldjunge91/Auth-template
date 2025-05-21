@@ -4,6 +4,7 @@ import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { hasRole, isRole } from "@/lib/auth/rbac"; // Importiere die RBAC-Funktionen
+import { ModeToggle } from "./mode-toggle"; // Importiere ModeToggle
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -31,7 +32,7 @@ export default function Navbar() {
             </Link>
           )}
         </div>
-        <div>
+        <div className="flex items-center space-x-2"> {/* Container für Buttons und ModeToggle */}
           {session ? (
             <>
               <span className="text-white mr-4">Welcome, {session.user?.name}</span>
@@ -44,6 +45,7 @@ export default function Navbar() {
               Sign In
             </Button>
           )}
+          <ModeToggle /> {/* ModeToggle hier hinzugefügt */}
         </div>
       </div>
     </nav>

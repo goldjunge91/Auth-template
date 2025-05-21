@@ -54,9 +54,8 @@ export const authOptions: AuthOptions = {
             console.log("Benutzer hat kein Passwort-Hash gespeichert:", user.email);
             return null;
           }
-          
-          const isPasswordCorrect = await bcryptjs.compare(credentials.password, user.passwordHash);
 
+          const isPasswordCorrect = await bcryptjs.compare(credentials.password, user.passwordHash);
           if (isPasswordCorrect) {
             console.log("Benutzer erfolgreich authentifiziert:", user.email);
             // Stelle sicher, dass die ID ein String ist.
