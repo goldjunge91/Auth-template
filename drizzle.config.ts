@@ -1,21 +1,38 @@
-import type { Config } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
+import { defineConfig } from 'drizzle-kit';
+import { join } from 'path';
 
 dotenv.config({
   path: '.env',
 });
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not set in .env file');
-}
+// Lokaler Datenbankpfad als Fallback
+const localDbPath = join(process.cwd(), './src/db/local.db');
 
-export default {
-  schema: './src/db/schema.ts',
-  out: './drizzle',
-  driver: 'pg',
+// Verwende DATABASE_URL aus Umgebungsvariablen, oder lokale Datei als Fallback
+const dbUrl = process.env.DATABASE_URL || localDbPath;
+
+export default defineConfig({
+  dialect: "postgresql",
+  schema: './src/db/schema/*',
+  out: './src/db/drizzle',
+  driver: "pglite",
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL,
+    url: dbUrl,
+  },
+  migrations: {
+    prefix: "timestamp",
+    table: "__drizzle_migrations__",
+    schema: 'public',
+  },
+  entities: {
+    roles: {
+      provider: '',
+      exclude: [],
+      include: []
+    }
   },
   verbose: true,
   strict: true,
-} satisfies Config;
+  breakpoints: true,
+});
