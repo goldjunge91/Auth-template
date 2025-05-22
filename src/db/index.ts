@@ -52,12 +52,12 @@ const createDbConnection = (): DbInstance => {
     }
   } else {
     console.log("DB: Produktions-/Standardmodus - Verwende TursoDB.");
-    const tursoUrl = process.env.TURSO_URL;
+    const tursoUrl = process.env.TURSO_CONNECTION_URL;
     const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 
     if (!tursoUrl) {
       throw new Error(
-        'TURSO_URL ist nicht gesetzt. Diese Umgebungsvariable wird für TursoDB benötigt.'
+        'TURSO_CONNECTION_URL ist nicht gesetzt. Diese Umgebungsvariable wird für TursoDB benötigt.'
       );
     }
     if (!tursoAuthToken) {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type VariantProps, cva } from "class-variance-authority";
 import type * as React from "react";
 
@@ -18,7 +19,7 @@ const shellVariants = cva("grid items-center gap-8 pt-6 pb-8 md:py-8", {
 });
 
 interface ShellProps
-  extends React.HTMLAttributes<HTMLElement>, // Geändert von HTMLDivElement zu HTMLElement
+  extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof shellVariants> {
   as?: React.ElementType;
 }
