@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar"; // Avatar und AvatarImage importieren
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -22,7 +22,6 @@ export default function ProfilePage() {
           <div className="flex justify-center mb-4">
             <Avatar className="h-24 w-24">
               <AvatarImage src={session.user?.image || undefined} alt={session.user?.name || "Benutzer"} />
-              <AvatarFallback>{session.user?.name?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
             </Avatar>
           </div>
           <CardTitle className="text-2xl">{session.user?.name || "Benutzerprofil"}</CardTitle>

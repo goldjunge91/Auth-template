@@ -7,7 +7,7 @@
 // const handler = NextAuth(authOptions);
 
 // export { handler as GET, handler as POST };
-import { authOptions } from "@/lib/next-auth-options";
+import { authOptions } from "@/lib/auth/next-auth-options";
 import { NextApiRequest, NextApiResponse } from "next";
 import NextAuth, { AuthOptions } from "next-auth";
 
