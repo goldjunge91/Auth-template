@@ -11,6 +11,14 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
+  {
+    ignores: [
+      "src/components/ui/",
+      "src/components/blocks/",
+      "src/components/animata/",
+      "src/components/magicui/",
+    ],
+  },
+];  
 
 export default eslintConfig;

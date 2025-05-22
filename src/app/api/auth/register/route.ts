@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
 import { db } from '@/db'; // Importiere schema und eq von @/db
 import { eq } from 'drizzle-orm';
-
+import * as schema from '@/db/schema/sqlite/index.sql'; // Importiere das Schema
 export async function POST(request: Request) {
   try {
     // Debuggen der eingehenden Anfrage
@@ -58,7 +58,6 @@ export async function POST(request: Request) {
     }
 
     // Benutzer erstellen
-    // @ts-ignore
     const result = await db.insert(schema.users).values({
       name,
       email,
@@ -72,7 +71,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: 'Benutzer erfolgreich registriert.',
-      // @ts-ignore
       userId: result[0].id
     }, { status: 201 });
 

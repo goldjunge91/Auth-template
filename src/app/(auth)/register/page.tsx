@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import * as z from "zod"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
+import { toast } from "sonner" // Import toast
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -18,8 +19,9 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { LucideAlertCircle, LucideLoader2 } from "lucide-react"
+// Remove Alert and AlertDescription imports as they are no longer used
+// import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LucideLoader2 } from "lucide-react"
 
 // Schema für das Registrierungs-Formular
 const registerSchema = z.object({
@@ -36,7 +38,8 @@ type RegisterValues = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  // Remove error state
+  // const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<RegisterValues>({
@@ -52,7 +55,7 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterValues) {
     try {
       setIsLoading(true)
-      setError(null)
+      // setError(null) // Remove setError call
       
       // API-Aufruf zur Registrierung des Benutzers
       const response = await fetch('/api/auth/register', {
@@ -70,7 +73,7 @@ export default function RegisterPage() {
       const result = await response.json()
 
       if (!response.ok) {
-        setError(result.message || "Ein Fehler ist aufgetreten.")
+        toast.error(result.message || "Ein Fehler ist aufgetreten.") // Use toast.error
         return
       }
 
@@ -89,7 +92,8 @@ export default function RegisterPage() {
       router.push("/") // Zur Startseite weiterleiten
       router.refresh()
     } catch (error) {
-      setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.")
+      console.error("Registration submission error:", error);
+      toast.error("Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.") // Use toast.error
     } finally {
       setIsLoading(false)
     }
@@ -104,12 +108,13 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
+        {/* Remove Alert component */}
+        {/* {error && (
           <Alert variant="destructive" className="mb-6">
             <LucideAlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        )}
+        )} */}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

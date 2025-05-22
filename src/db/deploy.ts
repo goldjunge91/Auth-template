@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import Database from "better-sqlite3";
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/better-sqlite3";

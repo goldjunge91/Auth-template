@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import * as z from "zod"
 import Link from "next/link"
+import { toast } from "sonner" // Import toast
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,8 +20,9 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { LucideAlertCircle, LucideLoader2 } from "lucide-react"
+// Remove Alert and AlertDescription imports as they are no longer used
+// import { Alert, AlertDescription } from "@/components/ui/alert" 
+import {LucideLoader2 } from "lucide-react"
 
 // Schema für das Login Formular
 const loginSchema = z.object({
@@ -32,7 +34,8 @@ type LoginValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  // Remove error state
+  // const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<LoginValues>({
@@ -46,7 +49,7 @@ export default function LoginPage() {
   async function onSubmit(data: LoginValues) {
     try {
       setIsLoading(true)
-      setError(null)
+      // setError(null) // Remove setError call
       
       const result = await signIn("credentials", {
         email: data.email,
@@ -55,14 +58,15 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError("Ungültige E-Mail oder Passwort.")
+        toast.error("Ungültige E-Mail oder Passwort.") // Use toast.error
         return
       }
 
       router.push("/") // Weiterleitung zur Startseite nach erfolgreicher Anmeldung
       router.refresh() // Aktualisieren der Seite, um die Sitzung zu reflektieren
     } catch (error) {
-      setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.")
+      console.error("Login submission error:", error);
+      toast.error("Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.") // Use toast.error
     } finally {
       setIsLoading(false)
     }
@@ -77,12 +81,13 @@ export default function LoginPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
+        {/* Remove Alert component */}
+        {/* {error && (
           <Alert variant="destructive" className="mb-6">
             <LucideAlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        )}
+        )} */}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">              <FormField
