@@ -3,6 +3,7 @@
 import * as React from "react";
 import { AuthProvider } from "./session_provider";
 import { ThemeProvider } from "./theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 type ProvidersProps = {
   children: React.ReactNode;
@@ -11,13 +12,17 @@ type ProvidersProps = {
 export function Providers({ children }: ProvidersProps) {
   return (
     <AuthProvider>
+
       <ThemeProvider
         attribute="class"
         defaultTheme="system"
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <TooltipProvider>
+          {children}
+        </TooltipProvider>
+
       </ThemeProvider>
     </AuthProvider>
   );
