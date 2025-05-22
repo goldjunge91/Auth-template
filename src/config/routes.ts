@@ -70,21 +70,104 @@ export const getAllAccessibleRoutes = (
   let accessibleRoutes: string[] = [...routesConfig.publicRoutes];
 
   if (isAuthenticated) {
-    accessibleRoutes = [...accessibleRoutes, ...routesConfig.authenticatedRoutes];
+    accessibleRoutes.push(...routesConfig.authenticatedRoutes);
 
+    // Prüfe auf Admin-Rolle zuerst, da Admins auch Manager-Rechte haben könnten
     if (roles.includes("admin")) {
-      // Admins erhalten Admin-, Manager- und authentifizierte Routen
-      accessibleRoutes = [
-        ...accessibleRoutes,
-        ...routesConfig.adminRoutes,
-        ...routesConfig.managerRoutes,
-      ];
-    } else if (roles.includes("user_manager")) {
-      // Manager erhalten Manager- und authentifizierte Routen
-      accessibleRoutes = [...accessibleRoutes, ...routesConfig.managerRoutes];
+      accessibleRoutes.push(...routesConfig.adminRoutes);
+      accessibleRoutes.push(...routesConfig.managerRoutes); // Admins erben Manager-Routen
+    } else if (roles.includes("manager")) { // Geändert von "user_manager" zu "manager"
+      accessibleRoutes.push(...routesConfig.managerRoutes);
     }
   }
-  // Dedupliziere Routen, um mehrfache Links zur selben Seite zu vermeiden
-  const uniqueRoutes = Array.from(new Set(accessibleRoutes));
-  return uniqueRoutes;
+  // Dedupliziere Routen am Ende, um die korrekte Reihenfolge und Einzigartigkeit sicherzustellen
+  return Array.from(new Set(accessibleRoutes));
+};
+
+// NEUE STRUKTUR UND FUNKTION FÜR NAVBAR-LINKS
+
+export interface NavbarLink { // Hinzugefügt für Klarheit und Export
+  href: string;
+  label: string;
+}
+
+export interface NavbarLinkGroup {
+  // title?: string; // Optional, falls wir Gruppen-Titel im Dropdown bräuchten
+  links: NavbarLink[]; // Geändert von paths: string[] zu links: NavbarLink[]
+}
+
+export interface NavbarStructure {
+  alwaysVisible: NavbarLinkGroup;
+  authenticated: NavbarLinkGroup;
+  manager: NavbarLinkGroup;
+  admin: NavbarLinkGroup;
+}
+
+// Definiere hier, welche öffentlichen Routen auch in der Navbar für eingeloggte User erscheinen sollen
+const publicNavbarLinksConfig: Array<{path: string, label?: string}> = [ // Geändert zu Array von Objekten
+    { path: "/" },
+    { path: "/file-handling-demo" },
+    { path: "/animated-border-trail-demo", label: "Animation Demo" }, // Beispiel mit benutzerdefiniertem Label
+];
+
+
+export const getNavbarLinks = (
+  isAuthenticated: boolean,
+  roles: string[] = []
+): NavbarStructure => {
+  const structure: NavbarStructure = {
+    alwaysVisible: { links: [] },
+    authenticated: { links: [] },
+    manager: { links: [] },
+    admin: { links: [] },
+  };
+
+  const allAccessible = getAllAccessibleRoutes(isAuthenticated, roles);
+
+  const createNavbarLink = (path: string, label?: string): NavbarLink => ({
+    href: path,
+    label: label || generateLabelFromPath(path),
+  });
+
+  // 1. Fülle "alwaysVisible" mit den definierten öffentlichen Links, die zugänglich sind
+  structure.alwaysVisible.links = publicNavbarLinksConfig
+    .filter(item => allAccessible.includes(item.path))
+    .map(item => createNavbarLink(item.path, item.label));
+
+  if (isAuthenticated) {
+    // Hilfsfunktion, um Duplikate basierend auf href zu filtern
+    const getUniqueLinks = (targetGroup: NavbarLink[], ...otherGroups: NavbarLinkGroup[]): NavbarLink[] => {
+        const existingHrefs = otherGroups.flatMap(group => group.links.map(l => l.href));
+        return targetGroup.filter(link => !existingHrefs.includes(link.href));
+    };
+
+    // 2. Authenticated-spezifische Links
+    const authSpecificPaths = routesConfig.authenticatedRoutes.filter(path => allAccessible.includes(path));
+    structure.authenticated.links = getUniqueLinks(
+        authSpecificPaths.map(path => createNavbarLink(path)),
+        structure.alwaysVisible
+    );
+
+    // 3. Manager-spezifische Links
+    if (roles.includes("manager") || roles.includes("admin")) {
+      const managerSpecificPaths = routesConfig.managerRoutes.filter(path => allAccessible.includes(path));
+      structure.manager.links = getUniqueLinks(
+        managerSpecificPaths.map(path => createNavbarLink(path)),
+        structure.alwaysVisible,
+        structure.authenticated
+      );
+    }
+
+    // 4. Admin-spezifische Links
+    if (roles.includes("admin")) {
+      const adminSpecificPaths = routesConfig.adminRoutes.filter(path => allAccessible.includes(path));
+      structure.admin.links = getUniqueLinks(
+        adminSpecificPaths.map(path => createNavbarLink(path)),
+        structure.alwaysVisible,
+        structure.authenticated,
+        structure.manager
+      );
+    }
+  }
+  return structure;
 };
