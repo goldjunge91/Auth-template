@@ -4,8 +4,12 @@
       "type": "sse",
       "url": "https://gitmcp.io/drizzle-team/drizzle-orm-docs"
     },
-      "drizzle-playground Docs": {
+    "drizzle-playground Docs": {
       "url": "https://gitmcp.io/rphlmr/drizzle-playground"
+    },
+    "ui Docs": {
+      "type": "sse",
+      "url": "https://gitmcp.io/shadcn-ui/ui"
     }
   }
 }
