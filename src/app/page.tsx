@@ -1,11 +1,11 @@
 import Html from "@/components/blocks/hero-futuristic";
-import Testimonials from "@/components/blocks/testimonials"; // Import der Testimonials-Komponente
+import TestimonialsLoader from "@/components/blocks/testimonials-loader"; // Importiere die neue Ladekomponente
 
 export default function Home() {
   return (
     <>
       <Html />
-      <Testimonials />
+      <TestimonialsLoader /> {/* Verwende die neue Ladekomponente */}
     </>
   );
 }

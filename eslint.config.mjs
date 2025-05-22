@@ -13,6 +13,18 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     ignores: [
+      "node_modules",
+      "build",
+      "dist",
+      "out",
+      "coverage",
+      "public",
+      "scripts",
+      "cypress",
+      "playwright",
+      "storybook-static",
+      "storybook",
+      ".next",
       "src/components/ui/",
       "src/components/blocks/",
       "src/components/animata/",

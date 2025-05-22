@@ -18,14 +18,29 @@ export const routesConfig: RoutesConfig = {
   publicRoutes: [
     // Beispiel:
     // "/about",
-  ],
-  authenticatedRoutes: [
-    "/profile",
+    "/",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/terms-of-service",
+    "/privacy-policy",
+    "/contact",
+    "/impressum",
+    "/file-handling-demo",
     "/animated-border-trail-demo",
     "/file-upload",
     "/file-upload-demo",
     "/tests",
     "/upload",
+  ],
+  authenticatedRoutes: [
+    "/profile",
+    // "/animated-border-trail-demo",
+    // "/file-upload",
+    // "/file-upload-demo",
+    // "/tests",
+    // "/upload",
   ],
   managerRoutes: [
     "/user-management",
