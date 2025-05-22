@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 import { Navbar } from "@/components/layout/navbar";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -77,6 +78,7 @@ export default function RootLayout({
       {/* <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       > */}
+       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",

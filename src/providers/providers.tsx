@@ -4,6 +4,7 @@ import * as React from "react";
 import { AuthProvider } from "./session_provider";
 import { ThemeProvider } from "./theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { TempoInit } from "@/app/tempo-init";
 
 type ProvidersProps = {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export function Providers({ children }: ProvidersProps) {
         enableSystem
         disableTransitionOnChange
       >
+        <TempoInit />
         <TooltipProvider>
           {children}
         </TooltipProvider>
