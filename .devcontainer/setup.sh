@@ -1,1 +1,1 @@
-echo "gh codespace ports -c $CODESPACE_NAME" >> ~/.bashrc
+# echo "gh codespace ports -c $CODESPACE_NAME" >> ~/.bashrc

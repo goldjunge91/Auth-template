@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       userId: result[0].id
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Fehler bei der Registrierung:', error);
 
     return NextResponse.json(

@@ -110,5 +110,3 @@ To fully implement the manager's ability to view data of users they manage, the 
         ```
     *   This approach is more flexible if a user can have multiple managers or if the relationship has additional properties, though typically a user has one direct line manager.
 
-Auth.js callbacks (e.g., to include managed user IDs in the session token if appropriate, or to check permissions) and API logic (for filtering data in API routes) would then need to be updated to utilize this relationship to filter data appropriately, ensuring managers can only access data related to their direct reports.
----
