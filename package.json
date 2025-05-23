@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:e2e": "playwright test",
     "dev:cloud": "./.devcontainer/open-port.sh & npm run dev",
     "db:generate:sqlite": "npx drizzle-kit generate --config drizzle.sqlite.config.ts",
     "db:migrate:sqlite": "npx drizzle-kit migrate --config drizzle.sqlite.config.ts",
@@ -103,6 +104,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
