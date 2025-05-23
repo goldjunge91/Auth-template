@@ -1,5 +1,5 @@
-import { Shell } from "@/components/shell";
-
+import { FileUploadLocal } from "@/components/file-upload-components/file-upload-form-local";
+import { FileUploadUploadThing } from "@/components/file-upload-components/file-upload-uploadthing";
 import {
   Card,
   CardContent,
@@ -7,22 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileUploadDemo } from "./components/file-upload-demo";
-import { FileUploadFormDemo } from "./components/file-upload-form-demo";
-import { FileUploadUploadThingDemo } from "./components/file-upload-uploadthing-demo";
+import { cn } from "@/lib/utils";
 
 export default function IndexPage() {
   return (
-    <Shell className="max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic</CardTitle>
-          <CardDescription>Basic controlled file upload.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileUploadDemo />
-        </CardContent>
-      </Card>
+    <section className={cn("grid items-center gap-8 pt-6 pb-8 md:py-8 container max-w-2xl")}>
       <Card>
         <CardHeader>
           <CardTitle>React hook form</CardTitle>
@@ -31,7 +20,7 @@ export default function IndexPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <FileUploadFormDemo />
+          <FileUploadLocal />
         </CardContent>
       </Card>
       <Card>
@@ -40,9 +29,9 @@ export default function IndexPage() {
           <CardDescription>File upload using uploadthing.</CardDescription>
         </CardHeader>
         <CardContent>
-          <FileUploadUploadThingDemo />
+          <FileUploadUploadThing />
         </CardContent>
       </Card>
-    </Shell>
+    </section>
   );
 }

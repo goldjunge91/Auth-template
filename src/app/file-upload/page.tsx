@@ -165,8 +165,8 @@ export default function FileUploadPage() {
             );
           })}
         </FileUpload.List>
-        <FileUpload.Clear className="mt-4" onClick={handleClearAll}>
-          <Button variant="destructive" size="sm">Clear All</Button>
+        <FileUpload.Clear asChild className="mt-4">
+          <Button variant="destructive" size="sm" onClick={handleClearAll}>Clear All</Button>
         </FileUpload.Clear>
       </FileUpload.Root>
     </div>
