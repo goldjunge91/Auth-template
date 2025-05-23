@@ -62,9 +62,9 @@ export const DEFAULT_LOGIN_REDIRECT = '/profile';
 
 /**
  * Default Allowed Redirects from callbackUrl searchParams
- * @type {string}
+ * @type {string[]}
  */
-export const ALLOWED_REDIRECTS = ['/server', '/admin', '/client', '/settings'];
+export const ALLOWED_REDIRECTS = ['/profile', '/admin-dashboard', '/user-management'];
 
 /**
  * Protected routes that require authentication
@@ -90,71 +90,3 @@ export const oauthCallbackRoutes = [
   '/api/auth/callback/github',
   // Add other OAuth providers here as needed
 ];
-
-// Hilfsfunktion, um ein lesbares Label aus einem Pfad zu generieren
-export const generateLabelFromPath = (path: string): string => {
-  if (path === "/") return "Startseite";
-  const name = path.substring(path.lastIndexOf("/") + 1);
-  // Ersetze Bindestriche durch Leerzeichen und mache den ersten Buchstaben jedes Wortes groß
-  return name
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-// Navigation basierend auf tatsächlich existierenden Seiten im App-Router
-export const BASE_NAV_ITEMS = [
-  { href: '/', label: 'Startseite' },
-  { href: '/file-handling-demo', label: 'Datei-Demo' },
-  { href: '/animated-border-trail-demo', label: 'Animations-Demo' },
-  { href: '/file-upload', label: 'Datei-Upload' },
-  { href: '/impressum', label: 'Impressum' },
-  { href: '/tests', label: 'Tests' },
-];
-
-// Benutzer-spezifische Navigationsseiten
-export const AUTH_NAV_ITEMS = [
-  { href: '/profile', label: 'Profil' },
-  // { href: '/dashboard', label: 'Dashboard' },
-  // { href: '/bookings', label: 'Meine Termine' },
-  // { href: '/settings', label: 'Einstellungen' },
-];
-
-// Admin-spezifische Navigationsseiten mit Icons
-export const ADMIN_NAV_ITEMS = [
-  {
-    href: '/admin-dashboard',
-    label: 'Admin Dashboard',
-    icon: 'LayoutDashboard',
-  },
-  {
-    href: '/user-management',
-    label: 'Benutzerverwaltung',
-    icon: 'Users',
-  },
-];
-
-// Rolle-basierte Navigationshilfe für die Navbar
-export const getRoleBasedNavItems = (role?: string) => {
-  // Standardmäßig BASE_NAV_ITEMS zurückgeben
-  const navItems = [...BASE_NAV_ITEMS];
-  
-  // Füge authentifizierte Routen für eingeloggte Benutzer hinzu
-  if (role) {
-    navItems.push(...AUTH_NAV_ITEMS);
-    
-    // Füge Admin-spezifische Routen hinzu, wenn Benutzer Admin ist
-    if (role === 'admin') {
-      // Einfachere Version ohne Icons für Menüs
-      const adminItems = ADMIN_NAV_ITEMS.map(({ href, label }) => ({ href, label }));
-      navItems.push(...adminItems);
-    }
-    
-    // Füge Manager-spezifische Routen hinzu, wenn Benutzer Manager ist
-    if (role === 'manager' || role === 'admin') {
-      // Hier könnten Manager-spezifische Routen hinzugefügt werden, wenn benötigt
-    }
-  }
-  
-  return navItems;
-};

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+// import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, Menu as MenuIcon, UserCircle, Moon, Sun, BarChart3, CreditCard, FileText, Users, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { BASE_NAV_ITEMS, AUTH_NAV_ITEMS, ADMIN_NAV_ITEMS, getRoleBasedNavItems } from "@/config/routes";
+import { ADMIN_NAV_ITEMS, getRoleBasedNavItems } from "@/config/navigation";
 import { useTheme } from "next-themes";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,7 +27,6 @@ export interface NavbarLink {
 }
 
 export function Navbar() {
-  const pathname = usePathname();
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const user = session?.user;
@@ -151,9 +150,6 @@ export function Navbar() {
       default: return <FileText className="h-5 w-5" />;
     }
   };
-
-  // Vereinfachte Version von Admin-Links ohne Icons
-  const adminNavItems = userRole === 'admin' ? ADMIN_NAV_ITEMS.map(({ href, label }) => ({ href, label })) : [];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
