@@ -87,8 +87,8 @@ export async function processAndSaveLocalFile(
 export function sanitizeAndGenerateUniqueFilename(originalName: string): string {
   const cleanedName = originalName
     .toLowerCase()
-    .replace(/\\s+/g, '_') // Replace spaces with underscores
-    .replace(/[^a-z0-9_\\-\\.]/g, ''); // Keep only allowed characters (alphanumeric, _, -, .)
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .replace(/[^a-z0-9_\-\.]/g, ''); // Keep only allowed characters (alphanumeric, _, -, .)
 
   // Ensure extension is correctly handled, even if cleanedName loses it
   const extension = path.extname(cleanedName) || path.extname(originalName) || '';
@@ -96,7 +96,7 @@ export function sanitizeAndGenerateUniqueFilename(originalName: string): string 
   if (!baseName && cleanedName.endsWith('.')) { // Handle cases like "file." -> "file"
       baseName = cleanedName.slice(0, -1);
   } else if (!baseName) { // Handle cases where basename might be empty after cleaning
-      baseName = path.basename(originalName, path.extname(originalName)).toLowerCase().replace(/\\s+/g, '_').replace(/[^a-z0-9_\\-]/g, '');
+      baseName = path.basename(originalName, path.extname(originalName)).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
   }
 
 
