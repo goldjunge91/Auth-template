@@ -78,7 +78,7 @@ export default function RootLayout({
       {/* <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       > */}
-       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
+      <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
@@ -89,7 +89,9 @@ export default function RootLayout({
         <Providers>
           <div className="relative flex min-h-screen flex-col">
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main className="flex flex-1 flex-col items-center">
+              {children}
+            </main>
           </div>
           <TailwindIndicator />
           <Toaster />
