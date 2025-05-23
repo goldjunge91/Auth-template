@@ -404,7 +404,7 @@ export function FileUploadLocal() {
             {uploadedFiles.map((file) => (
               <div key={file.key} className="relative size-20">
                 <Image
-                  src={file.fileUrl || file.url}
+                  src={file.ufsUrl} // Use ufsUrl for consistency
                   alt={file.name}
                   fill
                   sizes="100px"

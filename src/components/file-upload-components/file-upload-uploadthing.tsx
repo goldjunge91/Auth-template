@@ -42,7 +42,22 @@ export function FileUploadUploadThing() {
           },
         });
 
-        setUploadedFiles((prev) => [...prev, ...res]);
+        // Map UploadThing's response to our UploadedFile type
+        const mappedRes: UploadedFile[] = res.map(uploadThingFile => ({
+          key: uploadThingFile.key,
+          name: uploadThingFile.name,
+          size: uploadThingFile.size,
+          url: uploadThingFile.url, // Store original uploadthing URL
+          ufsUrl: uploadThingFile.url, // Use the same URL for ufsUrl for display consistency
+          type: files.find(f => f.name === uploadThingFile.name)?.type || '', // Try to get type from original files
+          serverData: uploadThingFile.serverData,
+          customId: uploadThingFile.customId,
+          // Provide default values for other fields if UploadedFile expects them
+          appUrl: '',
+          fileHash: '',
+        }));
+
+        setUploadedFiles((prev) => [...prev, ...mappedRes]);
 
         toast.success("Uploaded files:", {
           description: (
@@ -136,7 +151,7 @@ export function FileUploadUploadThing() {
           ))}
         </FileUploadList>
       </FileUpload>
-      {uploadFiles.length > 0 ? (
+      {uploadedFiles.length > 0 ? (
         <div className="flex flex-col gap-4">
           <p className="font-medium text-sm">Uploaded files</p>
           <div className="flex items-center gap-2 overflow-x-auto">

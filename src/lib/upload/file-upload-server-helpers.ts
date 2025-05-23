@@ -154,8 +154,8 @@ export async function assembleChunks(
         return false;
       }
 
-      // Lese den Chunk und schreibe ihn in die Zieldatei
-      const chunkData = await fs.promises.readFile(chunkPath);
+      // Lese den Chunk und schreibe ihn in die Zieldatei - verwende das importierte readFile
+      const chunkData = await readFile(chunkPath);
       writeStream.write(chunkData);
     }
 
@@ -185,7 +185,7 @@ export async function assembleChunks(
     console.log(`File assembled successfully at ${finalFilePath}`);
     return true;
   } catch (error) {
-    console.error(`Error assembling chunks: ${error}`);
+    console.error(`Error assembling chunks:`, error);
     return false;
   }
 }
