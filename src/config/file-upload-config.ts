@@ -4,7 +4,7 @@ export const DEFAULT_MAX_SIZE_MB = 10; // Default max size in MB for client-side
 
 // Chunk configuration
 export const DEFAULT_CHUNK_SIZE = 1024 * 1024; // 1MB default chunk size
-export const MIN_CHUNK_SIZE = 256 * 1024; // 256KB minimum chunk size
+export const MIN_CHUNK_SIZE = 512 * 1024; // 256KB minimum chunk size
 export const MAX_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB maximum chunk size
 
 // Allowed file types
