@@ -3,7 +3,7 @@
 import * as z from "zod";
 import type { UploadedFile } from "@/types";
 import path from "node:path";
-import { fileUploadResponseSchema } from "@/lib/schemas/file-upload-schemas";
+import { fileUploadResponseSchema } from "@/lib/upload/schemas/file-upload-schemas";
 
 /**
  * Defines a Zod schema for validating a single local file.

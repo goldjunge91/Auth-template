@@ -8,13 +8,13 @@ import {
   sanitizeAndGenerateUniqueFilename,
   assembleChunks,
   validateChunkHash,
-} from "@/lib/file-upload-server-helpers";
+} from "@/lib/upload/file-upload-server-helpers";
 import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/config/file-upload-config";
 import { 
   fileUploadResponseSchema, 
   chunkUploadResponseSchema, 
   errorResponseSchema 
-} from "@/lib/schemas/file-upload-schemas";
+} from "@/lib/upload/schemas/file-upload-schemas";
 
 export async function POST(request: NextRequest) {
   console.log("POST /api/upload called");

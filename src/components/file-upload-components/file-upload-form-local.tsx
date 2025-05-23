@@ -7,11 +7,11 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import type { UploadedFile } from "@/types";
 import Image from "next/image"; // Import Image component
-import { processAndSaveLocalFile } from "@/lib/file-upload-helpers"; // Import der neuen Hilfsfunktion
+import { processAndSaveLocalFile } from "@/lib/upload/file-upload-helpers"; // Import der neuen Hilfsfunktion
 import { 
   uploadResponseSchema, 
   FileUploadResponse 
-} from "@/lib/schemas/file-upload-schemas";
+} from "@/lib/upload/schemas/file-upload-schemas";
 
 import { Button } from "@/components/ui/button";
 import {
