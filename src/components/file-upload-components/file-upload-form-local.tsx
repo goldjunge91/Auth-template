@@ -8,6 +8,10 @@ import * as z from "zod";
 import type { UploadedFile } from "@/types";
 import Image from "next/image"; // Import Image component
 import { processAndSaveLocalFile } from "@/lib/file-upload-helpers"; // Import der neuen Hilfsfunktion
+import { 
+  uploadResponseSchema, 
+  FileUploadResponse 
+} from "@/lib/schemas/file-upload-schemas";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -88,15 +92,10 @@ export function FileUploadLocal() {
           headers.append("X-File-Type", file.type);
           headers.append("X-File-Size", file.size.toString());
           
-          // ########################
           // Optional: Add X-Chunk-Hash if you implement server-side chunk validation
           const chunkArrayBuffer = await chunk.arrayBuffer(); // Read chunk as ArrayBuffer
           const chunkHash = await crypto.subtle.digest('SHA-256', chunkArrayBuffer);
           headers.append('X-Chunk-Hash', Buffer.from(chunkHash).toString('hex'));
-          // formData.append("chunk", chunk); // Already appended with Blob, no need to change if server handles Blob
-                                          // If server strictly expects ArrayBuffer, then append chunkArrayBuffer
-                                          // For now, server handles Blob from FormData correctly.
-          // ########################
 
           toast.info(
             `Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${file.name}`,
@@ -106,48 +105,69 @@ export function FileUploadLocal() {
             },
           );
 
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-            headers,
-          });
+          try {
+            const response = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+              headers,
+            });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.error ||
-                `Server error for chunk ${chunkIndex + 1}: ${
-                  response.statusText
-                }`,
-            );
-          }
+            let responseData;
+            try {
+              // Versuche, die Antwort als JSON zu parsen
+              responseData = await response.json();
+            } catch (jsonError) {
+              console.error("Failed to parse response as JSON:", jsonError);
+              // Wenn JSON-Parsing fehlschlägt, versuche, den Text zu lesen
+              const textResponse = await response.text();
+              console.error("Raw response:", textResponse);
+              throw new Error(`Invalid server response: ${textResponse || "Empty response"}`);
+            }
 
-          const result = await response.json();
+            if (!response.ok) {
+              // Wenn die Antwort nicht OK ist, wirf einen Fehler mit den Daten
+              const errorMessage = responseData?.error || `Server error: ${response.status} ${response.statusText}`;
+              console.error("Server error response:", responseData);
+              throw new Error(errorMessage);
+            }
 
-          if (result.fileUrl && result.fileName) {
-            // Last chunk response should contain the final file URL and name
-            fileUrl = result.fileUrl;
-            fileName = result.fileName;
-            toast.success(
-              `Chunk ${chunkIndex + 1}/${totalChunks} for ${
-                file.name
-              } uploaded. File assembled!`,
-              {
-                id: uploadId, // Update the main toast for this file
-              },
-            );
-          } else if (result.message === "Chunk uploaded successfully") {
-             toast.success(
-              `Chunk ${chunkIndex + 1}/${totalChunks} for ${
-                file.name
-              } uploaded successfully.`,
-              {
-                id: `${uploadId}-chunk-${chunkIndex}`, // Update specific chunk toast
-                duration: 2000,
-              },
-            );
+            // Jetzt haben wir gültige JSON-Daten
+            console.log(`Chunk ${chunkIndex + 1} response:`, responseData);
+
+            // Validiere die Antwort mit dem Schema
+            if (responseData.success === true) {
+              // Erfolgsfall
+              if (chunkIndex === totalChunks - 1) {
+                // Letzter Chunk
+                fileUrl = responseData.fileUrl || responseData.url;
+                fileName = responseData.fileName || responseData.filename;
+                toast.success(
+                  `File ${file.name} uploaded and assembled successfully!`,
+                  { id: uploadId }
+                );
+              } else {
+                // Zwischenchunk
+                toast.success(
+                  `Chunk ${chunkIndex + 1}/${totalChunks} for ${file.name} uploaded successfully.`,
+                  { id: `${uploadId}-chunk-${chunkIndex}`, duration: 2000 }
+                );
+              }
+            } else {
+              // Fehlerfall
+              throw new Error(responseData.error || "Unknown error during upload");
+            }
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+            console.error(`Error uploading chunk ${chunkIndex + 1}:`, error);
+            toast.error(`Error uploading ${file.name}`, {
+              id: uploadId,
+              description: errorMessage,
+            });
+            // Breche den Upload für diese Datei ab
+            throw error;
           }
         }
+
         if (fileUrl && fileName) {
           allUploadedFileResponses.push({
             key: uploadId, // Or use a server-generated key if available

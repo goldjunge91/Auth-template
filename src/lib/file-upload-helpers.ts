@@ -2,9 +2,8 @@
 
 import * as z from "zod";
 import type { UploadedFile } from "@/types";
-import path from "path";
-import { stat, mkdir, readFile, unlink, rmdir } from "fs/promises";
-import fs from 'fs';
+import path from "node:path";
+import { fileUploadResponseSchema } from "@/lib/schemas/file-upload-schemas";
 
 /**
  * Defines a Zod schema for validating a single local file.
@@ -44,86 +43,35 @@ export async function processAndSaveLocalFile(
 
   const validatedFile = validation.data;
   const fileUrl = URL.createObjectURL(validatedFile);
+  const fileKey = crypto.randomUUID();
 
-  return {
-    key: crypto.randomUUID(),
-    name: validatedFile.name,
-    size: validatedFile.size,
-    url: fileUrl, // Diese URL kann sowohl für die Vorschau als auch für den "Download" verwendet werden
-    type: validatedFile.type,
+  // Erstelle ein Objekt, das dem Schema entspricht
+  const uploadedFile = fileUploadResponseSchema.parse({
+    success: true,
+    message: "File processed locally",
+    filename: validatedFile.name,
+    fileUrl: fileUrl,
+    fileName: validatedFile.name,
+    url: fileUrl,
     serverData: null,
     customId: null,
-    appUrl: "", // Nicht anwendbar für lokale Dateien
-    ufsUrl: fileUrl, // Zur Konsistenz mit dem UploadedFile-Typ
-    // Erstellt einen einfachen Hash für lokale Dateien
+    appUrl: "",
+    ufsUrl: fileUrl,
     fileHash: `${validatedFile.name}-${validatedFile.size}-${validatedFile.lastModified}`,
+  });
+
+  return {
+    key: fileKey,
+    name: uploadedFile.fileName ?? validatedFile.name,
+    size: validatedFile.size,
+    url: uploadedFile.fileUrl ?? "",
+    type: validatedFile.type,
+    serverData: uploadedFile.serverData,
+    customId: uploadedFile.customId ?? null,
+    appUrl: uploadedFile.appUrl ?? "",
+    ufsUrl: uploadedFile.ufsUrl ?? "",
+    fileHash: uploadedFile.fileHash ?? "",
   };
-}
-
-// --- Von route.ts verschobene Funktionen ---
-
-/**
- * Ensures that the base upload directory and its temporary subdirectory exist.
- * Creates them if they don't.
- * @returns A promise that resolves to an object containing paths to `baseUploadDir` and `tmpDir`.
- * @throws An error if directory creation fails for reasons other than non-existence.
- */
-export async function ensureUploadDirsExist(): Promise<{ baseUploadDir: string; tmpDir: string }> {
-  const baseUploadDir = path.join(process.cwd(), 'public', 'uploads');
-  const tmpDir = path.join(baseUploadDir, 'tmp');
-
-  for (const dir of [baseUploadDir, tmpDir]) {
-    try {
-      await stat(dir);
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        await mkdir(dir, { recursive: true });
-        console.info(`Created directory: ${dir}`);
-      } else {
-        console.error(`Error ensuring directory ${dir} exists:`, error);
-        throw error; // Re-throw other errors
-      }
-    }
-  }
-  return { baseUploadDir, tmpDir };
-}
-
-/**
- * Validates file metadata (size and type) against defined limits.
- * @param fileSize The size of the file in bytes.
- * @param fileType The MIME type of the file.
- * @param fileName The original name of the file.
- * @param maxFileSizeBytes The maximum allowed file size in bytes.
- * @param allowedFileTypes An array of allowed MIME types.
- * @returns An error object if validation fails, otherwise null.
- */
-export function validateFileMeta(
-  fileSize: number,
-  fileType: string | null,
-  fileName: string,
-  maxFileSizeBytes: number,
-  allowedFileTypes: string[],
-): { error?: string; details?: string; status?: number, file?: string } | null {
-  if (fileSize > maxFileSizeBytes) {
-    const errorDetails = `File "${fileName}" (${fileSize} bytes) is too large. Max size is ${maxFileSizeBytes / (1024 * 1024)}MB (${maxFileSizeBytes} bytes).`;
-    return {
-      error: "File too large",
-      details: errorDetails,
-      file: fileName,
-      status: 413
-    };
-  }
-
-  if (!fileType || !allowedFileTypes.includes(fileType)) {
-    const errorDetails = `File type "${fileType}" for file "${fileName}" is not allowed. Allowed types: ${allowedFileTypes.join(", ")}`;
-    return {
-      error: "Unsupported file type",
-      details: errorDetails,
-      file: fileName,
-      status: 415
-    };
-  }
-  return null; // No error
 }
 
 // ########################
@@ -173,46 +121,4 @@ export function sanitizeAndGenerateUniqueFilename(originalName: string): string 
   // Ensure the base name is not too long and the extension is correctly appended
   const finalBaseName = baseName.substring(0, 50); // Limit base name length
   return `${finalBaseName}-${uniqueSuffix}${extension}`;
-}
-
-/**
- * Assembles a file from its chunks stored in a temporary directory.
- * @param tmpDir The base temporary directory for all uploads.
- * @param uploadId The unique ID for this specific upload.
- * @param totalChunks The total number of chunks for this file.
- * @param finalFilePath The full path where the assembled file should be saved.
- * @returns A promise that resolves when the file is assembled and temporary chunks are cleaned up.
- * @throws An error if assembly or cleanup fails.
- */
-export async function assembleChunks(
-  tmpDir: string,
-  uploadId: string,
-  totalChunks: number,
-  finalFilePath: string,
-): Promise<void> {
-  const tempUserUploadDir = path.join(tmpDir, uploadId);
-  const writeStream = fs.createWriteStream(finalFilePath);
-
-  for (let i = 0; i < totalChunks; i++) {
-    const chunkPath = path.join(tempUserUploadDir, `${i}.chunk`);
-    const chunkBuffer = await readFile(chunkPath);
-    writeStream.write(chunkBuffer);
-    await unlink(chunkPath); // Delete chunk after appending
-  }
-  writeStream.end();
-
-  // Wait for the stream to finish writing
-  await new Promise<void>((resolve, reject) => {
-    writeStream.on('finish', () => resolve());
-    writeStream.on('error', reject);
-  });
-
-  // Clean up the temporary directory for this upload
-  try {
-    await rmdir(tempUserUploadDir);
-    console.info(`Temporary directory ${tempUserUploadDir} deleted successfully.`);
-  } catch (cleanupError: any) {
-    console.warn(`Warning: Could not delete temporary directory ${tempUserUploadDir}:`, cleanupError.message);
-    // Non-fatal, log and continue
-  }
 }
