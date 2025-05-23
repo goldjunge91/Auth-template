@@ -12,8 +12,11 @@ import { Buffer } from 'buffer'; // Required for Buffer.from with crypto.subtle.
  * @throws An error if directory creation fails for reasons other than non-existence.
  */
 export async function ensureUploadDirsExist(): Promise<{ baseUploadDir: string; tmpDir: string }> {
-  const baseUploadDir = path.join(process.cwd(), 'public', 'uploads');
-  const tmpDir = path.join(baseUploadDir, 'tmp');
+  // Import here to avoid circular dependencies
+  const { FINAL_UPLOAD_DIR, TMP_UPLOAD_DIR } = await import('@/config/file-upload-config');
+
+  const baseUploadDir = path.join(process.cwd(), FINAL_UPLOAD_DIR);
+  const tmpDir = path.join(process.cwd(), TMP_UPLOAD_DIR);
 
   for (const dir of [baseUploadDir, tmpDir]) {
     try {
@@ -70,19 +73,24 @@ export function validateFileMeta(
 }
 
 /**
- * Validiert einen Chunk-Hash gegen den vom Client gesendeten Hash
+ * Validates the hash of a received chunk against a provided hash.
+ * This function is used server-side to verify the integrity of uploaded chunks.
+ *
+ * @param chunkBuffer The buffer of the received chunk.
+ * @param clientHash The hash sent by the client.
+ * @returns A promise that resolves to true if hashes match, false otherwise.
  */
 export async function validateChunkHash(chunkBuffer: ArrayBuffer, clientHash: string): Promise<boolean> {
   try {
-    if (!clientHash) return true; // Wenn kein Hash gesendet wurde, überspringen wir die Validierung
-    
+    if (!clientHash) return true; // Skip validation if no hash was provided
+
     const serverHash = await crypto.subtle.digest('SHA-256', chunkBuffer);
     const serverHashHex = Buffer.from(serverHash).toString('hex');
-    
+
     return serverHashHex === clientHash;
   } catch (error) {
     console.error("Error validating chunk hash:", error);
-    return false; // Bei Fehlern schlägt die Validierung fehl
+    return false; // Consider validation failed on error
   }
 }
 
@@ -122,21 +130,21 @@ export async function assembleChunks(
   finalFilePath: string
 ): Promise<boolean> {
   const chunkDir = path.join(baseTmpDir, uploadId);
-  
+
   try {
     console.log(`Assembling ${totalChunks} chunks from ${chunkDir} to ${finalFilePath}`);
-    
+
     // Stelle sicher, dass das Zielverzeichnis existiert
     const finalDir = path.dirname(finalFilePath);
     await mkdir(finalDir, { recursive: true });
-    
+
     // Öffne die Zieldatei zum Schreiben
     const writeStream = fs.createWriteStream(finalFilePath);
-    
+
     // Verarbeite jeden Chunk in der richtigen Reihenfolge
     for (let i = 0; i < totalChunks; i++) {
       const chunkPath = path.join(chunkDir, `chunk-${i}.tmp`);
-      
+
       try {
         // Prüfe, ob der Chunk existiert
         await access(chunkPath, constants.F_OK);
@@ -145,19 +153,19 @@ export async function assembleChunks(
         writeStream.end();
         return false;
       }
-      
+
       // Lese den Chunk und schreibe ihn in die Zieldatei
       const chunkData = await fs.promises.readFile(chunkPath);
       writeStream.write(chunkData);
     }
-    
+
     // Schließe den Stream und warte auf Abschluss
     await new Promise<void>((resolve, reject) => {
       writeStream.end();
       writeStream.on('finish', resolve);
       writeStream.on('error', reject);
     });
-    
+
     // Lösche das temporäre Verzeichnis nach erfolgreicher Zusammenführung
     try {
       // Lösche alle Chunk-Dateien
@@ -165,7 +173,7 @@ export async function assembleChunks(
         const chunkPath = path.join(chunkDir, `chunk-${i}.tmp`);
         await unlink(chunkPath);
       }
-      
+
       // Lösche das Verzeichnis
       await rmdir(chunkDir);
       console.log(`Temporary directory ${chunkDir} deleted successfully.`);
@@ -173,7 +181,7 @@ export async function assembleChunks(
       console.warn(`Warning: Could not clean up temporary directory ${chunkDir}:`, cleanupError);
       // Wir werfen hier keinen Fehler, da die Datei bereits erfolgreich zusammengeführt wurde
     }
-    
+
     console.log(`File assembled successfully at ${finalFilePath}`);
     return true;
   } catch (error) {

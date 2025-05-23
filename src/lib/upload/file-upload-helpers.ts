@@ -74,25 +74,8 @@ export async function processAndSaveLocalFile(
   };
 }
 
-// ########################
-/**
- * Validates the hash of a received chunk against a provided hash.
- * @param chunkBuffer The buffer of the received chunk.
- * @param expectedHash The hash sent by the client.
- * @returns A promise that resolves to true if hashes match, false otherwise.
- */
-export async function validateChunkHash(chunkBuffer: ArrayBuffer, expectedHash: string): Promise<boolean> {
-  if (!expectedHash) return true; // No hash provided by client, skip validation
-  try {
-    const serverCalculatedHash = await crypto.subtle.digest('SHA-256', chunkBuffer);
-    const serverHashHex = Buffer.from(serverCalculatedHash).toString('hex');
-    return serverHashHex === expectedHash;
-  } catch (error) {
-    console.error("Error calculating or comparing chunk hash:", error);
-    return false; // Consider hash validation failed on error
-  }
-}
-// ########################
+// Note: The validateChunkHash function has been moved to file-upload-server-helpers.ts
+// to avoid duplication and ensure consistent implementation
 
 /**
  * Sanitizes an original filename and generates a unique filename to prevent conflicts.

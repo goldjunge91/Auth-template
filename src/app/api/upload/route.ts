@@ -9,11 +9,17 @@ import {
   assembleChunks,
   validateChunkHash,
 } from "@/lib/upload/file-upload-server-helpers";
-import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/config/file-upload-config";
-import { 
-  fileUploadResponseSchema, 
-  chunkUploadResponseSchema, 
-  errorResponseSchema 
+import {
+  MAX_FILE_SIZE,
+  ALLOWED_FILE_TYPES,
+  TMP_UPLOAD_DIR,
+  FINAL_UPLOAD_DIR,
+  ERROR_MESSAGES
+} from "@/config/file-upload-config";
+import {
+  fileUploadResponseSchema,
+  chunkUploadResponseSchema,
+  errorResponseSchema
 } from "@/lib/upload/schemas/file-upload-schemas";
 
 export async function POST(request: NextRequest) {
@@ -80,7 +86,7 @@ export async function POST(request: NextRequest) {
         console.log(`File metadata validated for ${originalFilename}`);
       }
 
-      const chunkDir = path.join(process.cwd(), "public", "uploads", "tmp", uploadId);
+      const chunkDir = path.join(process.cwd(), TMP_UPLOAD_DIR, uploadId);
       console.log(`[API Route] Chunk directory: ${chunkDir}`);
       try {
         await access(chunkDir);
@@ -123,20 +129,20 @@ export async function POST(request: NextRequest) {
         if (chunkIndex === totalChunks - 1) {
           console.log(`[API Route] Received last chunk for ${originalFilename}. Assembling file...`);
           const finalFilename = sanitizeAndGenerateUniqueFilename(originalFilename);
-          const finalFilePath = path.join(process.cwd(), "public", "uploads", finalFilename);
-          const baseTmpDir = path.join(process.cwd(), "public", "uploads", "tmp");
+          const finalFilePath = path.join(process.cwd(), FINAL_UPLOAD_DIR, finalFilename);
+          const baseTmpDir = path.join(process.cwd(), TMP_UPLOAD_DIR);
           console.log(`Final filename: ${finalFilename}, Final path: ${finalFilePath}`);
 
           const success = await assembleChunks(baseTmpDir, uploadId, totalChunks, finalFilePath);
-          
+
           if (!success) {
-            return NextResponse.json({ 
-              success: false, 
-              error: "Failed to assemble file chunks", 
-              details: "One or more chunks could not be processed" 
+            return NextResponse.json({
+              success: false,
+              error: "Failed to assemble file chunks",
+              details: "One or more chunks could not be processed"
             }, { status: 500 });
           }
-          
+
           console.log(`File ${finalFilename} assembled successfully at ${finalFilePath}`);
 
           const responsePayload = {

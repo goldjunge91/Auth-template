@@ -1,17 +1,24 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CloudUpload, X } from "lucide-react";
+import { CloudUpload, X, AlertCircle } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import type { UploadedFile } from "@/types";
-import Image from "next/image"; // Import Image component
-import { processAndSaveLocalFile } from "@/lib/upload/file-upload-helpers"; // Import der neuen Hilfsfunktion
-import { 
-  uploadResponseSchema, 
-  FileUploadResponse 
+import Image from "next/image";
+import { processAndSaveLocalFile } from "@/lib/upload/file-upload-helpers";
+import {
+  uploadResponseSchema,
+  FileUploadResponse
 } from "@/lib/upload/schemas/file-upload-schemas";
+import {
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_MAX_SIZE_MB,
+  ALLOWED_FILE_TYPES,
+  FILE_TYPE_GROUPS,
+  ERROR_MESSAGES
+} from "@/config/file-upload-config";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +30,7 @@ import {
   FileUploadItemPreview,
   FileUploadList,
   FileUploadTrigger,
+  FileUploadItemProgress
 } from "@/components/ui/file-upload";
 import {
   Form,
@@ -34,16 +42,26 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const CHUNK_SIZE = 1 * 1024 * 1024; // 1MB
+// Use the configurable chunk size
+const CHUNK_SIZE = DEFAULT_CHUNK_SIZE;
 
+// Create a schema for file type validation
+const fileTypeSchema = z.custom<File>((file) => {
+  return file instanceof File && ALLOWED_FILE_TYPES.includes(file.type);
+}, {
+  message: "Unsupported file type. Please upload only images, videos, or PDFs."
+});
+
+// Create the form schema with improved validation
 const formSchema = z.object({
   files: z
-    .array(z.custom<File>())
+    .array(fileTypeSchema)
     .min(1, "Please select at least one file")
     .max(2, "Please select up to 2 files")
-    .refine((files) => files.every((file) => file.size <= 5 * 1024 * 1024), {
-      message: "File size must be less than 5MB",
+    .refine((files) => files.every((file) => file.size <= DEFAULT_MAX_SIZE_MB * 1024 * 1024), {
+      message: `File size must be less than ${DEFAULT_MAX_SIZE_MB}MB`,
       path: ["files"],
     }),
 });
@@ -59,6 +77,9 @@ export function FileUploadLocal() {
   });
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
 
+  // State to track assembly progress
+  const [assemblingFiles, setAssemblingFiles] = React.useState<Record<string, boolean>>({});
+
   const onSubmit = React.useCallback(async (data: FormValues) => {
     toast("Starting file uploads...", {
       description: "Please wait while your files are being prepared and uploaded.",
@@ -72,8 +93,10 @@ export function FileUploadLocal() {
       let fileUrl = "";
       let fileName = "";
 
-      toast.info(`Uploading ${file.name} in ${totalChunks} chunks.`, {
-        id: uploadId, // Use uploadId to update this toast later
+      // Show more detailed information about the upload
+      toast.info(`Preparing to upload ${file.name}`, {
+        id: uploadId,
+        description: `File will be split into ${totalChunks} parts for efficient uploading.`,
       });
 
       try {
@@ -91,21 +114,27 @@ export function FileUploadLocal() {
           headers.append("X-Original-Filename", file.name);
           headers.append("X-File-Type", file.type);
           headers.append("X-File-Size", file.size.toString());
-          
+
           // Optional: Add X-Chunk-Hash if you implement server-side chunk validation
           const chunkArrayBuffer = await chunk.arrayBuffer(); // Read chunk as ArrayBuffer
           const chunkHash = await crypto.subtle.digest('SHA-256', chunkArrayBuffer);
           headers.append('X-Chunk-Hash', Buffer.from(chunkHash).toString('hex'));
 
-          toast.info(
-            `Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${file.name}`,
-            {
-              id: `${uploadId}-chunk-${chunkIndex}`,
-              duration: 5000, // Auto-dismiss after 5s, or update on next chunk
-            },
-          );
+          // This toast is no longer needed as we use a single toast per file
+          // that gets updated with each chunk
 
           try {
+            // Show progress for this chunk - use the same ID for all chunks of this file
+            const progressPercent = Math.floor(((chunkIndex + 1) / totalChunks) * 100);
+            toast.loading(
+              `Uploading ${file.name}: ${progressPercent}%`,
+              {
+                id: uploadId, // Use the same ID for all chunks to update the same toast
+                description: `Chunk ${chunkIndex + 1} of ${totalChunks}`,
+                duration: 3000, // Auto-dismiss after 3 seconds if not updated
+              }
+            );
+
             const response = await fetch("/api/upload", {
               method: "POST",
               body: formData,
@@ -114,56 +143,114 @@ export function FileUploadLocal() {
 
             let responseData;
             try {
-              // Versuche, die Antwort als JSON zu parsen
+              // Try to parse the response as JSON
               responseData = await response.json();
             } catch (jsonError) {
               console.error("Failed to parse response as JSON:", jsonError);
-              // Wenn JSON-Parsing fehlschlägt, versuche, den Text zu lesen
+              // If JSON parsing fails, try to read the text
               const textResponse = await response.text();
               console.error("Raw response:", textResponse);
+
+              // Show user-friendly error - use the same ID to replace the loading toast
+              toast.error(ERROR_MESSAGES.SERVER_ERROR, {
+                id: uploadId, // Use the same ID to replace the previous toast
+                description: "The server returned an invalid response format."
+              });
+
               throw new Error(`Invalid server response: ${textResponse || "Empty response"}`);
             }
 
             if (!response.ok) {
-              // Wenn die Antwort nicht OK ist, wirf einen Fehler mit den Daten
+              // If the response is not OK, throw an error with the data
               const errorMessage = responseData?.error || `Server error: ${response.status} ${response.statusText}`;
               console.error("Server error response:", responseData);
+
+              // Show user-friendly error based on status code
+              const friendlyMessage = response.status === 413 ? ERROR_MESSAGES.FILE_TOO_LARGE(file.name, DEFAULT_MAX_SIZE_MB) :
+                                     response.status === 415 ? ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(file.name, ['images', 'videos', 'PDFs']) :
+                                     ERROR_MESSAGES.SERVER_ERROR;
+
+              toast.error(friendlyMessage, {
+                id: uploadId, // Use the same ID to replace the previous toast
+              });
+
               throw new Error(errorMessage);
             }
 
             // Jetzt haben wir gültige JSON-Daten
             console.log(`Chunk ${chunkIndex + 1} response:`, responseData);
 
-            // Validiere die Antwort mit dem Schema
+            // Validate the response with the schema
             if (responseData.success === true) {
-              // Erfolgsfall
+              // Success case
               if (chunkIndex === totalChunks - 1) {
-                // Letzter Chunk
+                // Last chunk - show assembling progress
+                setAssemblingFiles(prev => ({ ...prev, [uploadId]: true }));
+
+                toast.loading(
+                  `Assembling file ${file.name}...`,
+                  { id: uploadId }
+                );
+
+                // Get file URL from response
                 fileUrl = responseData.fileUrl || responseData.url;
                 fileName = responseData.fileName || responseData.filename;
+
+                // Update toast when assembly is complete
+                setAssemblingFiles(prev => {
+                  const newState = { ...prev };
+                  delete newState[uploadId];
+                  return newState;
+                });
+
                 toast.success(
                   `File ${file.name} uploaded and assembled successfully!`,
                   { id: uploadId }
                 );
               } else {
-                // Zwischenchunk
+                // Intermediate chunk with progress indication
+                const progressPercent = Math.floor(((chunkIndex + 1) / totalChunks) * 100);
                 toast.success(
-                  `Chunk ${chunkIndex + 1}/${totalChunks} for ${file.name} uploaded successfully.`,
-                  { id: `${uploadId}-chunk-${chunkIndex}`, duration: 2000 }
+                  `Uploading ${file.name}: ${progressPercent}%`,
+                  {
+                    id: uploadId,
+                    description: `Chunk ${chunkIndex + 1} of ${totalChunks} uploaded successfully.`,
+                    duration: 2000, // Auto-dismiss after 2 seconds
+                  }
                 );
               }
             } else {
-              // Fehlerfall
-              throw new Error(responseData.error || "Unknown error during upload");
+              // Error case
+              const errorMessage = responseData.error || "Unknown error during upload";
+              toast.error(ERROR_MESSAGES.UPLOAD_FAILED, {
+                id: uploadId, // Use the same ID to replace the previous toast
+                description: errorMessage
+              });
+              throw new Error(errorMessage);
             }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
             console.error(`Error uploading chunk ${chunkIndex + 1}:`, error);
-            toast.error(`Error uploading ${file.name}`, {
+
+            // Provide more user-friendly error messages
+            let friendlyMessage = ERROR_MESSAGES.UPLOAD_FAILED;
+            let description = "Please try again or contact support if the problem persists.";
+
+            if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+              friendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
+              description = "Check your internet connection and try again.";
+            } else if (errorMessage.includes("integrity") || errorMessage.includes("hash")) {
+              friendlyMessage = ERROR_MESSAGES.HASH_MISMATCH;
+            } else if (errorMessage.includes("too large")) {
+              friendlyMessage = ERROR_MESSAGES.FILE_TOO_LARGE(file.name, DEFAULT_MAX_SIZE_MB);
+            }
+
+            toast.error(friendlyMessage, {
               id: uploadId,
-              description: errorMessage,
+              description: description,
             });
-            // Breche den Upload für diese Datei ab
+
+            // Abort the upload for this file
             throw error;
           }
         }
@@ -176,7 +263,7 @@ export function FileUploadLocal() {
             size: file.size,
             type: file.type,
             // Fülle die fehlenden Eigenschaften mit Standard- oder Nullwerten
-            serverData: null, 
+            serverData: null,
             customId: null,
             appUrl: "", // Oder eine relevante URL, falls zutreffend
             ufsUrl: fileUrl, // Kann gleich wie url sein für lokale Server-Uploads
@@ -190,11 +277,22 @@ export function FileUploadLocal() {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "An unknown error occurred during chunked upload";
-        toast.error(`Error uploading ${file.name}`, {
-          id: uploadId, // Update the main toast for this file with error
-          description: errorMessage,
+        console.error(`Error in file upload process for ${file.name}:`, error);
+
+        // Clear any assembling state for this file
+        setAssemblingFiles(prev => {
+          const newState = { ...prev };
+          delete newState[uploadId];
+          return newState;
         });
-        // Optional: Stop further uploads or handle retry logic here
+
+        // Show a more user-friendly error message
+        toast.error(ERROR_MESSAGES.UPLOAD_FAILED, {
+          id: uploadId, // Update the main toast for this file with error
+          description: "The upload process was interrupted. You may try again.",
+        });
+
+        // Optional: Add a retry button or mechanism here
         // For now, we'll let it try other files if any
       }
     }
@@ -239,12 +337,15 @@ export function FileUploadLocal() {
                   <FileUpload
                     value={field.value}
                     onValueChange={field.onChange}
-                    accept="image/*"
+                    accept={ALLOWED_FILE_TYPES.join(',')}
                     maxFiles={2}
-                    maxSize={5 * 1024 * 1024}
-                    onFileReject={(_, message) => {
+                    maxSize={DEFAULT_MAX_SIZE_MB * 1024 * 1024}
+                    onFileReject={(file, message) => {
+                      console.log(`File rejected: ${file.name} - ${message}`);
                       form.setError("files", {
-                        message,
+                        message: file.size > DEFAULT_MAX_SIZE_MB * 1024 * 1024
+                          ? ERROR_MESSAGES.FILE_TOO_LARGE(file.name, DEFAULT_MAX_SIZE_MB)
+                          : ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(file.name, ['images', 'videos', 'PDFs']),
                       });
                     }}
                     multiple
@@ -280,7 +381,7 @@ export function FileUploadLocal() {
                   </FileUpload>
                 </FormControl>
                 <FormDescription>
-                  Upload up to 2 images up to 5MB each.
+                  Upload up to 2 files (images, videos, or PDFs) up to {DEFAULT_MAX_SIZE_MB}MB each.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -303,7 +404,7 @@ export function FileUploadLocal() {
             {uploadedFiles.map((file) => (
               <div key={file.key} className="relative size-20">
                 <Image
-                  src={file.url} 
+                  src={file.fileUrl || file.url}
                   alt={file.name}
                   fill
                   sizes="100px"
