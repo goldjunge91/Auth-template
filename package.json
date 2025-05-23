@@ -122,6 +122,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "jsdom": "^26.1.0",
+    "mcp-sequentialthinking-tools": "^0.0.2",
     "playwright": "^1.52.0",
     "tailwindcss": "^4",
     "tempo-devtools": "^2.0.102",
