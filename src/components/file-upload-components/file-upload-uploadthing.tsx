@@ -20,7 +20,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { UploadThingError } from "uploadthing/server";
 
-export function FileUploadUploadThingDemo() {
+export function FileUploadUploadThing() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
