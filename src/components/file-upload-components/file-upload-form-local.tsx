@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 
+const CHUNK_SIZE = 1 * 1024 * 1024; // 1MB
+
 const formSchema = z.object({
   files: z
     .array(z.custom<File>())
@@ -54,35 +56,137 @@ export function FileUploadLocal() {
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
 
   const onSubmit = React.useCallback(async (data: FormValues) => {
-    const formData = new FormData();
-    data.files.forEach((file) => {
-      formData.append("files", file);
+    toast("Starting file uploads...", {
+      description: "Please wait while your files are being prepared and uploaded.",
     });
 
-    toast("Uploading files...", {
-      description: "Please wait while your files are being uploaded.",
-    });
+    const allUploadedFileResponses: UploadedFile[] = [];
 
-    try {
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+    for (const file of data.files) {
+      const uploadId = crypto.randomUUID();
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      let fileUrl = "";
+      let fileName = "";
+
+      toast.info(`Uploading ${file.name} in ${totalChunks} chunks.`, {
+        id: uploadId, // Use uploadId to update this toast later
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Server error: ${response.statusText}`);
+      try {
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+          const start = chunkIndex * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, file.size);
+          const chunk = file.slice(start, end);
+          const formData = new FormData();
+          formData.append("chunk", chunk);
+
+          const headers = new Headers();
+          headers.append("X-Upload-ID", uploadId);
+          headers.append("X-Chunk-Index", chunkIndex.toString());
+          headers.append("X-Total-Chunks", totalChunks.toString());
+          headers.append("X-Original-Filename", file.name);
+          headers.append("X-File-Type", file.type);
+          headers.append("X-File-Size", file.size.toString());
+          
+          // ########################
+          // Optional: Add X-Chunk-Hash if you implement server-side chunk validation
+          const chunkArrayBuffer = await chunk.arrayBuffer(); // Read chunk as ArrayBuffer
+          const chunkHash = await crypto.subtle.digest('SHA-256', chunkArrayBuffer);
+          headers.append('X-Chunk-Hash', Buffer.from(chunkHash).toString('hex'));
+          // formData.append("chunk", chunk); // Already appended with Blob, no need to change if server handles Blob
+                                          // If server strictly expects ArrayBuffer, then append chunkArrayBuffer
+                                          // For now, server handles Blob from FormData correctly.
+          // ########################
+
+          toast.info(
+            `Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${file.name}`,
+            {
+              id: `${uploadId}-chunk-${chunkIndex}`,
+              duration: 5000, // Auto-dismiss after 5s, or update on next chunk
+            },
+          );
+
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+            headers,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.error ||
+                `Server error for chunk ${chunkIndex + 1}: ${
+                  response.statusText
+                }`,
+            );
+          }
+
+          const result = await response.json();
+
+          if (result.fileUrl && result.fileName) {
+            // Last chunk response should contain the final file URL and name
+            fileUrl = result.fileUrl;
+            fileName = result.fileName;
+            toast.success(
+              `Chunk ${chunkIndex + 1}/${totalChunks} for ${
+                file.name
+              } uploaded. File assembled!`,
+              {
+                id: uploadId, // Update the main toast for this file
+              },
+            );
+          } else if (result.message === "Chunk uploaded successfully") {
+             toast.success(
+              `Chunk ${chunkIndex + 1}/${totalChunks} for ${
+                file.name
+              } uploaded successfully.`,
+              {
+                id: `${uploadId}-chunk-${chunkIndex}`, // Update specific chunk toast
+                duration: 2000,
+              },
+            );
+          }
+        }
+        if (fileUrl && fileName) {
+          allUploadedFileResponses.push({
+            key: uploadId, // Or use a server-generated key if available
+            name: fileName,
+            url: fileUrl,
+            size: file.size,
+            type: file.type,
+            // Fülle die fehlenden Eigenschaften mit Standard- oder Nullwerten
+            serverData: null, 
+            customId: null,
+            appUrl: "", // Oder eine relevante URL, falls zutreffend
+            ufsUrl: fileUrl, // Kann gleich wie url sein für lokale Server-Uploads
+            fileHash: `${fileName}-${file.size}-${uploadId}`, // Einfacher Hash basierend auf verfügbaren Daten
+          });
+        } else {
+          // This case should ideally not be reached if the last chunk response is correct
+          throw new Error(`File ${file.name} was processed but no final URL was received.`);
+        }
+
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "An unknown error occurred during chunked upload";
+        toast.error(`Error uploading ${file.name}`, {
+          id: uploadId, // Update the main toast for this file with error
+          description: errorMessage,
+        });
+        // Optional: Stop further uploads or handle retry logic here
+        // For now, we'll let it try other files if any
       }
+    }
 
-      const result = await response.json();
-      setUploadedFiles(result.uploadedFiles);
-
-      toast.success("Files uploaded successfully!", {
+    if (allUploadedFileResponses.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...allUploadedFileResponses]);
+      toast.success("All selected files processed.", {
         description: (
           <pre className="mt-2 w-80 rounded-md bg-accent/30 p-4 text-accent-foreground">
             <code>
               {JSON.stringify(
-                result.uploadedFiles.map((file: UploadedFile) =>
+                allUploadedFileResponses.map((file: UploadedFile) =>
                   file.name.length > 25
                     ? `${file.name.slice(0, 25)}...`
                     : file.name,
@@ -94,15 +198,11 @@ export function FileUploadLocal() {
           </pre>
         ),
       });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred";
-      toast.error("Error uploading files", {
-        description: errorMessage,
-      });
-      // Optional: Fehler im Formular anzeigen
-      // form.setError("files", { message: errorMessage });
+    } else if (data.files.length > 0) {
+        toast.warning("Some files could not be uploaded. Please check individual error messages.");
     }
+
+
   }, [form]);
 
   return (

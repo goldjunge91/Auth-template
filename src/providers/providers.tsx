@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AuthProvider } from "./session_provider";
+import { AuthProvider } from "./session-provider";
 import { ThemeProvider } from "./theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TempoInit } from "@/app/tempo-init";
