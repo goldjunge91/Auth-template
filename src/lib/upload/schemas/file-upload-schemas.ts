@@ -5,6 +5,7 @@ import * as z from "zod";
  */
 export const chunkUploadResponseSchema = z.object({
   success: z.literal(true),
+  responseType: z.literal("chunkSuccess"),
   message: z.string(),
   chunkIndex: z.number().optional(),
   totalChunks: z.number().optional(),
@@ -15,6 +16,7 @@ export const chunkUploadResponseSchema = z.object({
  */
 export const fileUploadResponseSchema = z.object({
   success: z.literal(true),
+  responseType: z.literal("fileSuccess"),
   message: z.string(),
   filename: z.string(),
   fileUrl: z.string().optional(),
@@ -33,6 +35,7 @@ export const fileUploadResponseSchema = z.object({
  */
 export const errorResponseSchema = z.object({
   success: z.literal(false),
+  responseType: z.literal("error"),
   error: z.string(),
   details: z.string().optional(),
   file: z.string().optional(),
@@ -42,7 +45,7 @@ export const errorResponseSchema = z.object({
 /**
  * Kombiniertes Schema für alle möglichen Antworten
  */
-export const uploadResponseSchema = z.discriminatedUnion("success", [
+export const uploadResponseSchema = z.discriminatedUnion("responseType", [
   fileUploadResponseSchema,
   errorResponseSchema,
   chunkUploadResponseSchema,
