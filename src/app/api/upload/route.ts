@@ -72,11 +72,12 @@ export async function POST(request: NextRequest) {
 
       if (chunkIndex === 0) {
         console.log("First chunk, validating file metadata...");
+        console.log('[ROUTE_TS_DEBUG] MAX_FILE_SIZE in route:', MAX_FILE_SIZE); // Temporary debug log
         const validationError = validateFileMeta(
           fileSize,
           fileTypeFromHeader,
           originalFilename,
-          MAX_FILE_SIZE,
+          MAX_FILE_SIZE, // This is where the value comes from
           ALLOWED_FILE_TYPES
         );
         if (validationError) {

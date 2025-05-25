@@ -23,7 +23,12 @@ export default defineConfig({
       test: {
         include: ['./all-tests/vitest-unit-tests/**/*.{test, spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
         environment: 'jsdom', // Common for React/Next.js component tests
-           setupFiles: ['./vitest-setup.ts']
+           setupFiles: ['./vitest-setup.ts'],
+        exclude: [
+          '**/node_modules/**',
+          '**/dist/**',
+          '**/e2e/**',
+        ],
       },
     }
     ],
