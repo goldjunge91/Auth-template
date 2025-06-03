@@ -7,20 +7,40 @@ import type { OurFileRouter } from "@/app/api/uploadthing/core";
 import { uploadFiles } from "@/lib/uploadthing/uploadthing";
 import { UploadThingError } from "uploadthing/server";
 
+/**
+ * Options for the `useUploadFile` hook.
+ * @template TFileRoute - The type of the file route.
+ */
 interface UseUploadFileOptions<TFileRoute extends AnyFileRoute>
   extends Pick<
     UploadFilesOptions<TFileRoute>,
     "headers" | "onUploadBegin" | "onUploadProgress" | "skipPolling"
   > {
+  /**
+   * An optional array of files that are already uploaded by default.
+   * @default []
+   */
   defaultUploadedFiles?: UploadedFile[];
 }
 
-export function useUploadFile(
-  endpoint: keyof OurFileRouter,
+/**
+ * A custom React hook for handling file uploads using UploadThing.
+ *
+ * @template TFileRoute - The specific file route from `OurFileRouter`.
+ * @param endpoint - The key of the file route in `OurFileRouter` to upload to.
+ * @param options - Optional configuration for the upload process.
+ * @returns An object containing:
+ *  - `onUpload`: A function to initiate the upload of an array of `File` objects.
+ *  - `uploadedFiles`: An array of `UploadedFile` objects representing successfully uploaded files.
+ *  - `progresses`: A record mapping file names to their upload progress (0-100).
+ *  - `isUploading`: A boolean indicating if an upload is currently in progress.
+ */
+export function useUploadFile<TFileRoute extends keyof OurFileRouter>(
+  endpoint: TFileRoute,
   {
     defaultUploadedFiles = [],
     ...props
-  }: UseUploadFileOptions<OurFileRouter[keyof OurFileRouter]> = {},
+  }: UseUploadFileOptions<OurFileRouter[TFileRoute]> = {},
 ) {
   const [uploadedFiles, setUploadedFiles] =
     React.useState<UploadedFile[]>(defaultUploadedFiles);
@@ -29,6 +49,10 @@ export function useUploadFile(
   );
   const [isUploading, setIsUploading] = React.useState(false);
 
+  /**
+   * Initiates the upload of the provided files.
+   * @param files - An array of `File` objects to upload.
+   */
   async function onUpload(files: File[]) {
     setIsUploading(true);
     try {
@@ -50,7 +74,7 @@ export function useUploadFile(
       if (error instanceof UploadThingError) {
         const errorMessage =
           error.data && "error" in error.data
-            ? error.data.error
+            ? (error.data.error as string) // Type assertion for safety
             : "Upload failed";
         toast.error(errorMessage);
         return;

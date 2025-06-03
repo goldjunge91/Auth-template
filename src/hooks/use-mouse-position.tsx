@@ -1,5 +1,15 @@
 import { RefObject, useEffect, useState } from "react";
 
+/**
+ * A custom React hook that tracks the mouse or touch position.
+ * If a `containerRef` is provided, the position is relative to that container.
+ * Otherwise, the position is relative to the viewport.
+ *
+ * @param containerRef - (Optional) A React ref to an HTML or SVG element.
+ *                       If provided, the mouse position will be relative to this element.
+ * @returns An object containing the `x` and `y` coordinates of the mouse/touch position.
+ *          The coordinates are `0, 0` initially.
+ */
 export const useMousePosition = (
   containerRef?: RefObject<HTMLElement | SVGElement>
 ) => {
@@ -15,6 +25,7 @@ export const useMousePosition = (
         // Calculate relative position even when outside the container
         setPosition({ x: relativeX, y: relativeY });
       } else {
+        // If no containerRef, position is relative to the viewport
         setPosition({ x, y });
       }
     };
@@ -24,19 +35,22 @@ export const useMousePosition = (
     };
 
     const handleTouchMove = (ev: TouchEvent) => {
-      const touch = ev.touches[0];
-      updatePosition(touch.clientX, touch.clientY);
+      if (ev.touches.length > 0) {
+        const touch = ev.touches[0];
+        updatePosition(touch.clientX, touch.clientY);
+      }
     };
 
-    // Listen for both mouse and touch events
+    // Listen for both mouse and touch events on the window
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("touchmove", handleTouchMove);
 
+    // Clean up event listeners on component unmount
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("touchmove", handleTouchMove);
     };
-  }, [containerRef]);
+  }, [containerRef]); // Rerun effect if containerRef changes
 
   return position;
 };
