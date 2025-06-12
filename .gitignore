@@ -43,3 +43,11 @@ next-env.d.ts
 **/tempobook/dynamic/
 **/tempobook/storyboards/
 public/uploads/*.png
+# Puppeteer E2E Test Artifacts
+temp/
+test-results.*
+screenshots/
+coverage/
+dev-server.log
+*.log
+test-results/*

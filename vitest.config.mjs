@@ -5,6 +5,31 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
+    coverage: {
+      enabled: true,
+      provider: 'v8', // or 'istanbul'
+      reporter: ['text', 'json', 'html'],
+      reportsDirectory: './coverage',
+      exclude: [
+        'coverage/**',
+        'dist/**',
+        'packages/*/test{,s}/**',
+        '**/*.d.ts',
+        'cypress/**',
+        'test{,s}/**',
+        'test{,-*}.{js,cjs,mjs,ts,tsx,jsx}',
+        '**/*{.,-}test.{js,cjs,mjs,ts,tsx,jsx}',
+        '**/*{.,-}spec.{js,cjs,mjs,ts,tsx,jsx}',
+        '**/__tests__/**',
+        '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
+        '**/.{eslint,mocha,prettier}rc.{js,cjs,yml}',
+        'next.config.*',
+        'tailwind.config.*',
+        'postcss.config.*',
+        '.next/**',
+        'node_modules/**'
+      ]
+    },
     projects: [{   // Projekt für E2E-Tests mit Playwright
       name: 'e2e-playwright', // Top-level name for this project
       test: {
